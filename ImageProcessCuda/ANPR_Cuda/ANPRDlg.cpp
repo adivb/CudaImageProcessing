@@ -12,9 +12,6 @@
 #define new DEBUG_NEW
 #endif
 
-#define LIMIT_YEAR	2018
-#define LIMIT_MONTH	3
-#define LIMIT_DAY	15
 
 // CAboutDlg dialog used for App About
 
@@ -490,11 +487,7 @@ void CANPRDlg::OnTimer(UINT_PTR nIDEvent)
 
 BOOL CANPRDlg::IsTimeLimitValid()
 {
-	CTime t1(LIMIT_YEAR, LIMIT_MONTH, LIMIT_DAY, 23, 59, 59);
-	CTime t = CTime::GetCurrentTime(); 
-	CTimeSpan span = t - t1;
-	if (span.GetTimeSpan() > 0)
-		return FALSE;
+	
 	return TRUE;
 }
 
