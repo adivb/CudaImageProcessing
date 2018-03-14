@@ -7,6 +7,7 @@
 #include "ANPRDlg.h"
 #include "afxdialogex.h"
 #include <direct.h>
+#include "Performance.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -76,16 +77,9 @@ BEGIN_MESSAGE_MAP(CANPRDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(ID_IMAGE_BROWSE, &CANPRDlg::OnBnClickedImageBrowse)
 	ON_BN_CLICKED(ID_CLOSE, &CANPRDlg::OnBnClickedClose)
-	ON_BN_CLICKED(IDC_SAMPLING, &CANPRDlg::OnClickedSampling)
-	ON_BN_CLICKED(IDC_CONVERT_BMP2JPG, &CANPRDlg::OnBnClickedConvertBmp2jpg)
-	ON_WM_TIMER()
-	ON_BN_CLICKED(IDC_REC_START, &CANPRDlg::OnBnClickedRecStart)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_LISTCTRL__IMAGE, &CANPRDlg::OnItemchangedListctrlImage)
 	ON_BN_CLICKED(IDC_INVERSE_COLOR, &CANPRDlg::OnBnClickedInverseColor)
-	ON_BN_CLICKED(IDC_SINGLE_RECOG, &CANPRDlg::OnBnClickedProcess)
 	ON_BN_CLICKED(IDC_BTN_SAVE, &CANPRDlg::OnBnClickedBtnSave)
-	ON_BN_CLICKED(IDC_BTN_THRESHOLD, &CANPRDlg::OnBnClickedBtnThreshold)
-	ON_BN_CLICKED(IDC_BTN_FILTER, &CANPRDlg::OnBnClickedBtnFilter)
 END_MESSAGE_MAP()
 
 
@@ -130,11 +124,9 @@ BOOL CANPRDlg::OnInitDialog()
 void CANPRDlg::Init()
 {
 	m_zoomRate = 1.0;
-	m_nTotalProcTime = 0;
 	m_fileName.Empty();
 	m_ImageFolderName.Empty();
 	m_nFileIndex = 0;
-	m_bRunFlag = m_bRecFlag = FALSE;
 	m_imgWidth = m_imgHeight = 0;
 	m_image = NULL;
 	m_undoImg = NULL;
@@ -143,7 +135,6 @@ void CANPRDlg::Init()
 	memset(m_bmih, 0, sizeof(*m_bmih));
 	m_bmih->biSize = sizeof(BITMAPINFOHEADER);	
 
-	((CButton*)GetDlgItem(IDC_SINGLE_RECOG))->EnableWindow(TRUE);
 }
 
 void CANPRDlg::InitControl()
@@ -155,10 +146,6 @@ void CANPRDlg::InitControl()
 	m_ctrlImageList.InsertColumn(3, _T("   Result"), LVCFMT_LEFT, 200);
 	m_ctrlImageList.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
 
-	((CStatic*)GetDlgItem(IDC_STATIC_IMAGE_COUNT))->SetWindowText(_T(""));
-	((CStatic*)GetDlgItem(IDC_STATIC_PROC_SPEED))->SetWindowText(_T(""));
-	((CStatic*)GetDlgItem(IDC_STATIC_PROC_TIME))->SetWindowText(_T(""));
-	((CStatic*)GetDlgItem(IDC_STATIC_PROC_NUMBER))->SetWindowText(_T(""));
 	UpdateData(FALSE);
 }
 
@@ -265,7 +252,6 @@ BOOL CANPRDlg::ReadMatImage(CString& fileName)
 
 BOOL CANPRDlg::ReadMatImageNew(CString& fileName)
 {	
-	
 	CFile w_file;
 	w_file.Open(fileName, CFile::modeRead);
 	long w_sz = w_file.GetLength();
@@ -320,10 +306,6 @@ void CANPRDlg::OnBnClickedImageBrowse()
 	}
 	CString strCnt;
 	strCnt.Format(_T("%d"), m_vecFileArray.size());
-	((CStatic*)GetDlgItem(IDC_STATIC_IMAGE_COUNT))->SetWindowText(strCnt);
-	((CStatic*)GetDlgItem(IDC_STATIC_PROC_SPEED))->SetWindowText(_T(""));
-	((CStatic*)GetDlgItem(IDC_STATIC_PROC_TIME))->SetWindowText(_T(""));
-	((CStatic*)GetDlgItem(IDC_STATIC_PROC_NUMBER))->SetWindowText(_T(""));
 }
 
 void CANPRDlg::CollectFiles(CString strDir, vector<CString> &vecArray)
@@ -392,136 +374,6 @@ void CANPRDlg::ListSelImageView(int curSel)
 }
 
 
-void CANPRDlg::OnClickedSampling()
-{
-	// TODO: Add your control notification handler code here
-}
-
-
-void CANPRDlg::CudaProcessImage(BOOL bUpdate)
-{	
-	if (m_image.empty())
-		return;
-	DWORD tm = GetTickCount();
-
-	int mem_size = 3 * m_imgWidth*m_imgHeight;
-	m_ImgData = (BYTE*)malloc(mem_size);
-	memcpy(m_ImgData, m_image.data, mem_size);
-
-
-	//m_engine.RM_Recognition(m_ImgData, m_imgWidth, m_imgHeight, 24, &m_iniSet, &m_carplateData);
-	
-	tm = GetTickCount() - tm;
-	m_nTotalProcTime += (UINT)tm;
-	CString tmtmp;
-	tmtmp.Format(_T("%d ms"), tm);
-	m_ctrlImageList.SetItemText(m_nFileIndex, 2, tmtmp);
-
-	tmtmp.Format(_T("%.1f"), (float)(m_nFileIndex + 1)*1000/m_nTotalProcTime);
-	((CStatic*)GetDlgItem(IDC_STATIC_PROC_SPEED))->SetWindowText(tmtmp);
-
-	tmtmp.Format(_T("%d ms"), m_nTotalProcTime);
-	((CStatic*)GetDlgItem(IDC_STATIC_PROC_TIME))->SetWindowText(tmtmp);
-
-	tmtmp.Format(_T("%d"), m_nFileIndex + 1);
-	((CStatic*)GetDlgItem(IDC_STATIC_PROC_NUMBER))->SetWindowText(tmtmp);
-}
-
-void CANPRDlg::CudaProcessImage(CString strImageFile)
-{
-	if(!ReadMatImageNew(strImageFile))
-		return;
-	DWORD tm = GetTickCount();
-	int mem_size = 3 * m_imgWidth*m_imgHeight;
-	m_ImgData = (BYTE*)malloc(mem_size);
-	memcpy(m_ImgData, m_image.data, mem_size);
-
-
-	//m_engine.RM_Recognition(m_ImgData, m_imgWidth, m_imgHeight, 24, &m_iniSet, &m_carplateData);
-
-	free(m_ImgData);
-	tm = GetTickCount() - tm;
-	CString tmtmp;
-	tmtmp.Format(_T("%d ms"), tm);
-	m_ctrlImageList.SetItemText(m_nFileIndex, 2, tmtmp);
-	Invalidate();
-}
-
-void CANPRDlg::OnBnClickedConvertBmp2jpg()
-{
-	// TODO: Add your control notification handler code here
-
-	CString temp;
-
-	temp = m_ImageFolderName;
-	CString fileFullPath;
-
-	int w_i = 0;
-	for (w_i = 0; w_i < m_vecFileArray.size(); w_i++)
-	{
-		fileFullPath = temp + _T("\\");
-		fileFullPath += m_vecFileArray[w_i];
-
-		ReadMatImageNew(fileFullPath);
-		if (m_image.empty()) continue;
-
-		if (fileFullPath.Right(3) == _T("jpg"))
-			fileFullPath = fileFullPath.Left(fileFullPath.GetLength() - 3) + _T("bmp");
-		else if(fileFullPath.Right(3) == _T("bmp"))
-			fileFullPath = fileFullPath.Left(fileFullPath.GetLength() - 3) + _T("jpg");
-		else 
-			continue;
-		//SaveMatImage(fileFullPath, m_image);
-		SaveImgToFile(fileFullPath, m_image.data, m_imgWidth, m_imgHeight, 8 * m_image.channels());
-	}
-	MessageBox(_T("process finished!"), _T("Info"), MB_OK);
-}
-
-
-
-void CANPRDlg::OnTimer(UINT_PTR nIDEvent)
-{
-	// TODO: Add your message handler code here and/or call default
-	CDialogEx::OnTimer(nIDEvent);
-}
-
-BOOL CANPRDlg::IsTimeLimitValid()
-{
-	
-	return TRUE;
-}
-
-void CANPRDlg::OnBnClickedRecStart()
-{
-	// TODO: Add your control notification handler code here
-	if (!IsTimeLimitValid())
-		return;
-
-	if (m_vecFileArray.size() < 1)
-	{
-		MessageBox(_T(" Select folder! \n\n Please click a button <Browse>."), _T("! ANPR MSG"), MB_OK);
-		return;
-	}
-	((CButton*)GetDlgItem(IDC_SINGLE_RECOG))->EnableWindow(FALSE);
-
-	m_bRecFlag = TRUE;
-	m_nFileIndex = -1;
-	if (!m_bRunFlag)
-	{
-		m_nTotalProcTime = 0;
-		m_ctrlImageList.DeleteAllItems();
-		((CButton*)GetDlgItem(IDC_REC_START))->SetWindowText(_T("Stop"));
-		SetTimer(0, 10, NULL);
-	}
-	else
-	{
-		((CButton*)GetDlgItem(IDC_REC_START))->SetWindowText(_T("All Frame Recog"));
-		KillTimer(0);		
-	}
-	m_bRunFlag = !m_bRunFlag;
-}
-
-
 void CANPRDlg::OnItemchangedListctrlImage(NMHDR *pNMHDR, LRESULT *pResult)
 {
 	LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
@@ -537,22 +389,41 @@ void CANPRDlg::OnItemchangedListctrlImage(NMHDR *pNMHDR, LRESULT *pResult)
 }
 
 
-
-
 void CANPRDlg::OnBnClickedInverseColor()
 {
 	// TODO: Add your control notification handler code here
 	if (m_image.empty())
 		return;
+
+	//////////////////////   CPU   ////////////////////////////////
+	Performance tm;
+	tm.start();
 	Mat temp = m_image.clone();
 	
 	int memsize = temp.rows*temp.cols * temp.channels();
 	for (int i = 0; i < memsize; i++)
 		temp.data[i] = 255 - temp.data[i];
-	
 	m_image = temp.clone();
+
+	tm.stop();
+	LogOutToStatic(IDC_STATIC_CPU_SPEED, tm.getMilliseconds());
+
+
+	///////////////////////   GPU   /////////////////////////////////
+	int mem_size = m_image.channels() * m_imgWidth*m_imgHeight;
+	m_ImgData = (BYTE*)malloc(mem_size);
+	memcpy(m_ImgData, m_image.data, mem_size);
+
+	tm.start();
+	m_engine.test();
+	tm.stop();
+
+	free(m_ImgData);
+	LogOutToStatic(IDC_STATIC_GPU_SPEED, tm.getMicroseconds());
+	
 	Invalidate();
 }
+
 
 BOOL CANPRDlg::SaveBmpFile(LPCTSTR lpszPathName, BYTE* pDib)
 {
@@ -713,14 +584,6 @@ BOOL CANPRDlg::PreTranslateMessage(MSG* pMsg)
 }
 
 
-void CANPRDlg::OnBnClickedProcess()
-{
-	// TODO: Add your control notification handler code here
-}
-
-
-
-
 void CANPRDlg::OnBnClickedBtnSave()
 {
 	// TODO: Add your control notification handler code here
@@ -741,4 +604,10 @@ void CANPRDlg::OnBnClickedBtnSave()
 	}
 }
 
-
+void CANPRDlg::LogOutToStatic(UINT ctrlID, float val)
+{
+	CString str;
+	str.Format(_T("%f"), val);
+	((CStatic*)GetDlgItem(ctrlID))->SetWindowText(str);
+	Invalidate();
+}

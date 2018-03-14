@@ -29,10 +29,7 @@ public:
 	unsigned int              m_buffer[sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * 256];
 		
 	CString m_fileName;
-	CString consTm;
 	int m_nFileIndex;
-	UINT m_nTotalProcTime;
-	BOOL m_bRunFlag, m_bRecFlag;
 	vector<CString> m_vecFileArray;
 
 	Mat m_image;
@@ -41,7 +38,6 @@ public:
 
 	CProcessEngine m_engine;
 
-	BOOL IsTimeLimitValid();	
 	void Init();
 	void InitControl();
 	BOOL ReadMatImage(CString& fileName);
@@ -51,8 +47,9 @@ public:
 	BOOL SaveMatImage(CString& fileName, Mat& img);
 	void CollectFiles(CString strDir, vector<CString> &vecArray);
 	void ListSelImageView(int curSel);
-	void CudaProcessImage(BOOL bUpdate);
-	void CudaProcessImage(CString strImageFile);
+
+	void LogOutToStatic(UINT ctrlID, float val);
+
 // Dialog Data
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ANPR_DIALOG };
@@ -80,15 +77,8 @@ public:
 	CListCtrl m_ctrlImageList;
 	afx_msg void OnBnClickedImageBrowse();
 	afx_msg void OnBnClickedClose();
-	afx_msg void OnClickedSampling();
-	afx_msg void OnBnClickedConvertBmp2jpg();
-	afx_msg void OnTimer(UINT_PTR nIDEvent);
-	afx_msg void OnBnClickedRecStart();
 	afx_msg void OnItemchangedListctrlImage(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnBnClickedInverseColor();
 	virtual BOOL PreTranslateMessage(MSG* pMsg);
-	afx_msg void OnBnClickedProcess();
 	afx_msg void OnBnClickedBtnSave();
-	afx_msg void OnBnClickedBtnThreshold();
-	afx_msg void OnBnClickedBtnFilter();
 };
