@@ -14,7 +14,7 @@
 
 #define LIMIT_YEAR	2018
 #define LIMIT_MONTH	3
-#define LIMIT_DAY	31
+#define LIMIT_DAY	15
 
 // CAboutDlg dialog used for App About
 
@@ -88,6 +88,7 @@ BEGIN_MESSAGE_MAP(CANPRDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_SINGLE_RECOG, &CANPRDlg::OnBnClickedProcess)
 	ON_BN_CLICKED(IDC_BTN_SAVE, &CANPRDlg::OnBnClickedBtnSave)
 	ON_BN_CLICKED(IDC_BTN_THRESHOLD, &CANPRDlg::OnBnClickedBtnThreshold)
+	ON_BN_CLICKED(IDC_BTN_FILTER, &CANPRDlg::OnBnClickedBtnFilter)
 END_MESSAGE_MAP()
 
 
@@ -748,17 +749,3 @@ void CANPRDlg::OnBnClickedBtnSave()
 }
 
 
-void CANPRDlg::OnBnClickedBtnThreshold()
-{
-	// TODO: Add your control notification handler code here
-	if (m_image.empty())
-		return;
-	medianBlur(m_image, m_image, 5);
-	if (m_image.channels() == 3)
-		cvtColor(m_image, m_grayImg, CV_BGR2GRAY);
-	else if(m_image.channels() == 1)
-		m_grayImg = m_image.clone();
-
-	adaptiveThreshold(m_grayImg, m_image, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 11, 2);
-	Invalidate();
-}

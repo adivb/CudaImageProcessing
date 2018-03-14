@@ -90,4 +90,5 @@ public:
 	afx_msg void OnBnClickedProcess();
 	afx_msg void OnBnClickedBtnSave();
 	afx_msg void OnBnClickedBtnThreshold();
+	afx_msg void OnBnClickedBtnFilter();
 };
