@@ -31,11 +31,11 @@ public:
 	int		m_nWidth,	m_nHeight;
 	int		m_nWidthorg,m_nHeightorg;
 	
-	void RM_ReleaseEngine();
 	BOOL AllocMem(int nWidth, int nHeight, int nBitCount);
 	BOOL initMem(BYTE* pbImage, int* nWidth, int* nHeight, int nBitCount);
 	void FreeMem();
 
+	void test();
 	void RGBToGrayNoMask(BYTE *pbRGB, BYTE *pbGray, int nWidth, int nHeight);
 	void CalcEdgeHist(int *pnEdge, int nWidth, int nHeight, int *pnHistP, int *pnHistN, int nMax);
 	int	 CalcEdgeThres(int *pnHist, int nLen);

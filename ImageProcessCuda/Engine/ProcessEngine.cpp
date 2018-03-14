@@ -95,145 +95,6 @@ void GetStatisticValue(int *buf,int n,  int* Min,int* Max,float* Ave,float* Dev)
     *Dev = sqrt(b);
 }
 
-BOOL SaveBmpFile(LPCTSTR lpszPathName, BYTE* pDib)
-{
-	LPBITMAPINFOHEADER lpBIH = (LPBITMAPINFOHEADER)pDib;
-	int FileSize, ImgSize;
-	int HeadSize;
-	int QuadSize;
-	BITMAPFILEHEADER FilehHeader;
-	ImgSize = lpBIH->biSizeImage;//GetBmpSize(w,h,lpBIH->biBitCount);
-	if (lpBIH->biBitCount == 1)		QuadSize = sizeof(RGBQUAD) * 2;
-	else if (lpBIH->biBitCount == 2)	QuadSize = sizeof(RGBQUAD) * 4;
-	else if (lpBIH->biBitCount == 4)	QuadSize = sizeof(RGBQUAD) * 16;
-	else if (lpBIH->biBitCount == 8)	QuadSize = sizeof(RGBQUAD) * 256;
-	else							QuadSize = 0;//24
-	HeadSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + QuadSize;
-	FileSize = HeadSize + ImgSize;
-	int DibSize = sizeof(BITMAPINFOHEADER) + QuadSize + ImgSize;
-
-	FilehHeader.bfType = 0x4d42;     //unsigned short    bfType;
-	FilehHeader.bfSize = FileSize;   //unsigned int	     bfSize;
-	FilehHeader.bfReserved1 = 0;     //unsigned short    bfReserved1;
-	FilehHeader.bfReserved2 = 0;     //unsigned short    bfReserved2;
-	FilehHeader.bfOffBits = HeadSize;//unsigned int      bfOffBits;
-
-	FILE* file = _tfopen(lpszPathName, _T("wb"));
-	if (file == NULL)
-		return FALSE;
-
-	fwrite(&FilehHeader, sizeof(BITMAPFILEHEADER), 1, file);
-	fwrite(pDib, DibSize, 1, file);
-	fclose(file);
-
-    return TRUE;
-
-}
-
-BOOL SaveImgToFile(LPCTSTR lpszPathName, BYTE* pImg, int w, int h,int nBitCount/*=1,8,24*/)
-{
-// #ifndef _DEBUG
-// 	return FALSE;
-// #endif
-	int i, j;
-	if (pImg == NULL) return FALSE;
-//	if (nBitCount != 8 && nBitCount != 1) return FALSE;
-
-	int widByte = (nBitCount*w + 31) / 32 * 4;
-	int ImgSize = widByte * h;
-	int nColror;
-	if (nBitCount == 24)
-		nColror = 0;
-	else if (nBitCount == 8)
-		nColror = 256;
-	else
-		nColror = 2;
-	int HeadSize = sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD)*nColror;
-
-	int DibSize = HeadSize + ImgSize;
-	BYTE *pDib = (BYTE*)malloc(DibSize);
-
-	//Create InfoHeader
-	BITMAPINFOHEADER* pBIH = (BITMAPINFOHEADER*)pDib;
-	pBIH->biSize = sizeof(BITMAPINFOHEADER);
-	pBIH->biWidth = w;
-	pBIH->biHeight = h;
-	pBIH->biPlanes = 1;
-	pBIH->biBitCount = (WORD)nBitCount;
-	pBIH->biCompression = 0;
-	pBIH->biSizeImage = ImgSize;
-	pBIH->biXPelsPerMeter = 0;
-	pBIH->biYPelsPerMeter = 0;
-	pBIH->biClrUsed = nColror;
-	pBIH->biClrImportant = 0;
-
-	//Create Palette
-	if (nColror > 0) {
-		BITMAPINFO* pInfoH = (BITMAPINFO*)(LPSTR)pBIH;
-		for (i = 0; i < nColror - 1; i++)
-		{
-			pInfoH->bmiColors[i].rgbRed = BYTE(i);
-			pInfoH->bmiColors[i].rgbGreen = BYTE(i);
-			pInfoH->bmiColors[i].rgbBlue = BYTE(i);
-			pInfoH->bmiColors[i].rgbReserved = 0;
-		}
-		pInfoH->bmiColors[nColror - 1].rgbRed = 255;
-		pInfoH->bmiColors[nColror - 1].rgbGreen = 255;
-		pInfoH->bmiColors[nColror - 1].rgbBlue = 255;
-		pInfoH->bmiColors[nColror - 1].rgbReserved = 0;
-	}
-
-	//Copy Image
-	BYTE *lpBits = pDib + HeadSize;
-	if (nBitCount == 24) {
-		int nInCnt = 0;
-		int nOutCnt = 0;
-		for (i = 0; i < h; i++) {
-			for (j = 0; j < w; j++) {
-				nInCnt = (widByte*(h - i - 1) + j * 3);
-				nOutCnt = (i*w + j) * 3;
-				lpBits[nInCnt] = pImg[nOutCnt];
-				lpBits[nInCnt+1] = pImg[nOutCnt+1];
-				lpBits[nInCnt+2] = pImg[nOutCnt+2];
-			}
-		}
-	}
-	else if (nBitCount == 8)
-	{
-		for (i = 0; i < h; i++) for (j = 0; j < w; j++)
-			lpBits[widByte*(h - i - 1) + j] = pImg[i*w + j];
-	}
-	else
-	{
-		BYTE reg = 0;
-		int rem = w % 8;
-		int i1 = 0;
-		for (i = h - 1; i >= 0; i--) {
-			int j1 = 0;
-			for (j = 0; j < w; j++) {
-				if (pImg[i*w + j] != 0)	reg |= 0;
-				else					reg |= 1;
-				if (((j + 1) % 8) == 0) {
-					lpBits[i1*widByte + j1] = reg;
-					j1++;
-					reg = 0;
-				}
-				else { reg <<= 1; }
-			}
-			if (rem != 0) {
-				reg <<= 8 - rem - 1;
-				lpBits[i1*widByte + j1] = reg;
-			}
-			reg = 0;
-			i1++;
-		}
-	}
-	BOOL bRet = SaveBmpFile(lpszPathName, pDib);
-	free(pDib); 
-	return TRUE;
-
-}
-
 BOOL IsIncludeRect(RECT& x, RECT& y)
 {
 	if(x.left >= y.left && x.right <= y.right && x.top >= y.top && x.bottom <= y.bottom)	return TRUE;
@@ -390,8 +251,16 @@ void CProcessEngine::FreeMem()
 
 }
 
+void CProcessEngine::test()
+{
+	m_cudaProcess.setImageSize(m_nWidth, m_nHeight);
+	m_cudaProcess.setGrayData(m_pbGray);
+}
+
 void CProcessEngine::RGBToGrayNoMask(BYTE *pbRGB, BYTE *pbGray, int nWidth, int nHeight)
 {
+	
+
 	int i, nSize = nWidth * nHeight,buf;
 	for(i = 0; i < nSize; i++)
 	{
